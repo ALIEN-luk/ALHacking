@@ -197,7 +197,7 @@ scanning finds — a rewritten history does not un-reveal a secret.
 python3 tools/secrets/tests/test_mask_secrets.py
 ```
 
-The 45 tests encode the policy clauses: masking lengths, OTP handling, placeholder filtering,
+The 48 tests encode the policy clauses: masking lengths, OTP handling, placeholder filtering,
 reveal gating, "no secret in any report", ignore semantics, exit codes and the absence of network
 code. Nothing in the suite performs network requests or writes outside its temporary directories.
 
