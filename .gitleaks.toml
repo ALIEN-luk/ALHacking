@@ -1,0 +1,34 @@
+# gitleaks configuration for ALHacking - history scanning.
+#
+# The repository's own scanner (tools/secrets/mask_secrets.py) covers the working
+# tree and the index. This configuration is for gitleaks, which walks the git
+# history. Both are governed by SECRETS_POLICY.md / SECRETS_POLICY.en.md.
+#
+# Usage:
+#   gitleaks detect --config .gitleaks.toml --redact --verbose
+#
+# --redact is mandatory: it keeps findings masked, as required by policy 1.
+
+title = "ALHacking secret detection"
+
+[extend]
+# Keep gitleaks' built-in provider rules and add the repository-wide allowlist.
+useDefault = true
+
+[allowlist]
+description = "Paths and values that cannot contain real credentials (policy 4)"
+paths = [
+    # Test fixtures: every value is invalid ("EXAMPLE" filler) but has to look
+    # like the real format to prove that the detection rules work.
+    '''tools/secrets/tests/fixtures\.py''',
+]
+# Add a regex here only for a confirmed false positive, never for a real secret:
+# regexes = ['''EXAMPLEplaceholder''']
+
+# Example of a repository-specific rule. Extend the list rather than editing the
+# default rules, and always add a test in tools/secrets/tests/.
+[[rules]]
+id = "alh-internal-token"
+description = "ALH internal access token (format: alh_ + 32 hex characters)"
+regex = '''\balh_[0-9a-f]{32}\b'''
+tags = ["token", "alh", "policy"]
