@@ -1,0 +1,43 @@
+#!/bin/sh
+# ALHacking pre-commit guard - blocks commits that would introduce a secret.
+#
+# Install once per clone:   bash scripts/install-hooks.sh
+# Policy:                   SECRETS_POLICY.md / SECRETS_POLICY.en.md
+#
+# Bypass (a recorded owner decision is required, see AGENTS.md):
+#   ALH_SECRETS_ALLOW=1 git commit ...
+# Language of the report:    ALH_SECRETS_LANG=pl (default: en)
+
+root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+scanner="$root/tools/secrets/mask_secrets.py"
+[ -f "$scanner" ] || exit 0
+
+if [ "${ALH_SECRETS_ALLOW:-0}" = "1" ]; then
+    echo "alh-secrets: scan skipped (ALH_SECRETS_ALLOW=1) - record the reason in the PR description." >&2
+    exit 0
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "alh-secrets: python3 not found - the commit is allowed, but the scan did not run." >&2
+    exit 0
+fi
+
+python3 "$scanner" --git-staged --fail-on high --lang "${ALH_SECRETS_LANG:-en}"
+status=$?
+
+if [ "$status" -eq 0 ]; then
+    exit 0
+fi
+
+echo "" >&2
+if [ "$status" -eq 2 ]; then
+    echo "alh-secrets: the scanner reported a configuration/usage error - fix it before committing." >&2
+else
+    echo "alh-secrets: COMMIT BLOCKED - a potential secret is staged." >&2
+    echo "  * move the value out of the repository (secret manager, .env outside git) and rotate it," >&2
+    echo "  * a confirmed false positive can be marked with a real comment:" >&2
+    echo "      # alh-secrets: ignore-line" >&2
+    echo "  * never bypass this hook to commit a real credential - rotate it instead (policy 8)." >&2
+fi
+echo "  Details: tools/secrets/README.md" >&2
+exit 1
